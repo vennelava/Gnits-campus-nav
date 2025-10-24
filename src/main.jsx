@@ -26,3 +26,11 @@ if ('serviceWorker' in navigator) {
       .catch(err => console.error('Service worker error:', err));
   });
 }
+import { registerSW } from 'virtual:pwa-register'
+
+registerSW({
+  onNeedRefresh() {},
+  onOfflineReady() {
+    console.log('App is ready to work offline!')
+  },
+})
