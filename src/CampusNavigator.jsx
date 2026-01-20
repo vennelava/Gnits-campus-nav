@@ -1344,7 +1344,7 @@ const findRoomByName = (name) => {
   }
   return null;
 };
-const CampusNavigation = () => {
+const CampusNavigatior = () => {
   const [mode, setMode] = useState("manual"); 
   const [typedLocation, setTypedLocation] = useState("");
   const [gpsCoords, setGpsCoords] = useState(null);
