@@ -1819,4 +1819,4 @@ const CampusNavigation = () => {
   );
 };
 
-export default CampusNavigation;
+export default CampusNavigatior;
