@@ -1215,22 +1215,23 @@ const BLOCK_CONNECTIONS = {
   CANTEEN: { coords: [17.4122889, 78.3995060], exits: ['CSE', 'ADMIN', 'IT', 'SilverJubilee']},
 SilverJubilee: { coords: [17.4125835, 78.3985642], exits: ['CSE', 'ECE', 'CANTEEN']},
 };
-
 const calculateDistance = (c1, c2) => {
   const R = 6371000;
   const lat1 = c1[0] * Math.PI / 180;
   const lat2 = c2[0] * Math.PI / 180;
   const dLat = (c2[0] - c1[0]) * Math.PI / 180;
   const dLon = (c2[1] - c1[1]) * Math.PI / 180;
-  const a = Math.sin(dLat/2)**2 + Math.cos(lat1)*Math.cos(lat2)*Math.sin(dLon/2)**2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 };
 
 const getAllNodes = () => {
   const nodes = [];
-  Object.keys(ROOM_DATABASE).forEach(block => {
-    Object.keys(ROOM_DATABASE[block].floors).forEach(floor => {
-      Object.keys(ROOM_DATABASE[block].floors[floor].rooms).forEach(room => {
+  Object.keys(ROOM_DATABASE).forEach((block) => {
+    Object.keys(ROOM_DATABASE[block].floors).forEach((floor) => {
+      Object.keys(ROOM_DATABASE[block].floors[floor].rooms).forEach((room) => {
         nodes.push(`${block}-${floor}-${room}`);
       });
     });
@@ -1239,37 +1240,45 @@ const getAllNodes = () => {
 };
 
 const getNeighbors = (nodeId) => {
-  const [block, floor, ...roomParts] = nodeId.split('-');
-  const room = roomParts.join('-');
+  const [block, floor, ...roomParts] = nodeId.split("-");
+  const room = roomParts.join("-");
   const floorData = ROOM_DATABASE[block].floors[floor];
   const neighbors = [];
-
-  Object.keys(floorData.rooms).forEach(other => {
+  Object.keys(floorData.rooms).forEach((other) => {
     if (other !== room) {
       const r1 = floorData.rooms[room];
       const r2 = floorData.rooms[other];
-      const w = r1.coords && r2.coords ? calculateDistance(r1.coords, r2.coords) : 20;
+      const w =
+        r1.coords && r2.coords
+          ? calculateDistance(r1.coords, r2.coords)
+          : 20;
       neighbors.push({ node: `${block}-${floor}-${other}`, weight: w });
     }
   });
-
-  if (room === 'Stairs' || room === 'Lift') {
-    Object.keys(ROOM_DATABASE[block].floors).forEach(fl => {
+  if (room === "Stairs" || room === "Lift") {
+    Object.keys(ROOM_DATABASE[block].floors).forEach((fl) => {
       if (fl !== floor) {
-        const target = ROOM_DATABASE[block].floors[fl].rooms[room] ? room : 'Stairs';
+        const target = ROOM_DATABASE[block].floors[fl].rooms[room]
+          ? room
+          : "Stairs";
         if (ROOM_DATABASE[block].floors[fl].rooms[target]) {
-          neighbors.push({ node: `${block}-${fl}-${target}`, weight: 50 });
+          neighbors.push({
+            node: `${block}-${fl}-${target}`,
+            weight: 50,
+          });
         }
       }
     });
   }
-
-  if (floor === '0' && BLOCK_CONNECTIONS[block]) {
-    BLOCK_CONNECTIONS[block].exits.forEach(b => {
-      const first = Object.keys(ROOM_DATABASE[b].floors['0'].rooms)[0];
+  if (floor === "0" && BLOCK_CONNECTIONS[block]) {
+    BLOCK_CONNECTIONS[block].exits.forEach((b) => {
+      const first = Object.keys(ROOM_DATABASE[b].floors["0"].rooms)[0];
       neighbors.push({
         node: `${b}-0-${first}`,
-        weight: calculateDistance(BLOCK_CONNECTIONS[block].coords, BLOCK_CONNECTIONS[b].coords)
+        weight: calculateDistance(
+          BLOCK_CONNECTIONS[block].coords,
+          BLOCK_CONNECTIONS[b].coords
+        ),
       });
     });
   }
@@ -1282,12 +1291,14 @@ const dijkstra = (start, end) => {
   const prev = {};
   const unvisited = new Set(getAllNodes());
 
-  unvisited.forEach(n => (dist[n] = Infinity));
+  unvisited.forEach((n) => (dist[n] = Infinity));
   dist[start] = 0;
 
   while (unvisited.size) {
     let min = null;
-    unvisited.forEach(n => { if (min === null || dist[n] < dist[min]) min = n; });
+    unvisited.forEach((n) => {
+      if (min === null || dist[n] < dist[min]) min = n;
+    });
 
     if (min === end) break;
     unvisited.delete(min);
@@ -1309,16 +1320,17 @@ const dijkstra = (start, end) => {
     path.unshift(curr);
     curr = prev[curr];
   }
-
   return { path, distance: dist[end] };
 };
 const findNearestNode = (coords) => {
   let best = null;
   let min = Infinity;
 
-  Object.keys(ROOM_DATABASE).forEach(block => {
-    Object.keys(ROOM_DATABASE[block].floors).forEach(floor => {
-      Object.entries(ROOM_DATABASE[block].floors[floor].rooms).forEach(([room, data]) => {
+  Object.keys(ROOM_DATABASE).forEach((block) => {
+    Object.keys(ROOM_DATABASE[block].floors).forEach((floor) => {
+      Object.entries(
+        ROOM_DATABASE[block].floors[floor].rooms
+      ).forEach(([room, data]) => {
         if (data.coords) {
           const d = calculateDistance(coords, data.coords);
           if (d < min) {
@@ -1333,20 +1345,11 @@ const findNearestNode = (coords) => {
   return best;
 };
 
-const findRoomByName = (name) => {
-  const q = name.toLowerCase();
-  for (const b in ROOM_DATABASE) {
-    for (const f in ROOM_DATABASE[b].floors) {
-      for (const r in ROOM_DATABASE[b].floors[f].rooms) {
-        if (r.toLowerCase() === q) return `${b}-${f}-${r}`;
-      }
-    }
-  }
-  return null;
-};
-const CampusNavigatior = () => {
-  const [mode, setMode] = useState("manual"); 
-  const [typedLocation, setTypedLocation] = useState("");
+// --------------------------------------------
+// 🔹 MAIN COMPONENT
+// --------------------------------------------
+const CampusNavigator = () => {
+  const [mode, setMode] = useState("manual");
   const [gpsCoords, setGpsCoords] = useState(null);
 
   const [fromBlock, setFromBlock] = useState("");
@@ -1362,16 +1365,11 @@ const CampusNavigatior = () => {
   const [currentView, setCurrentView] = useState("input");
 
   const [resolvedStartNode, setResolvedStartNode] = useState(null);
-
   const getStartNode = async () => {
     if (mode === "gps") {
-      if (!gpsCoords) {
-        return null;
-      }
+      if (!gpsCoords) return null;
       return findNearestNode(gpsCoords);
     }
-
-   
 
     if (mode === "manual") {
       if (!fromBlock || !fromFloor || !fromRoom) return null;
@@ -1380,24 +1378,29 @@ const CampusNavigatior = () => {
 
     return null;
   };
+  const requestGps = () => {
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const lat = pos.coords.latitude;
+        const lon = pos.coords.longitude;
 
- const requestGps = () => {
-  navigator.geolocation.getCurrentPosition(
-    (pos) => {
-      const lat = pos.coords.latitude;
-      const lon = pos.coords.longitude;
+        if (
+          calculateDistance(
+            [lat, lon],
+            BLOCK_CONNECTIONS["CSE"].coords
+          ) > 800
+        ) {
+          alert(
+            "You appear to be outside campus. GPS mode works only inside GNITS."
+          );
+          return;
+        }
 
-      if (calculateDistance([lat, lon], BLOCK_CONNECTIONS["CSE"].coords) > 800) {
-        alert("You appear to be outside campus. GPS mode works only inside GNITS.");
-        return;
-      }
-
-      setGpsCoords([lat, lon]);
-    },
-    () => {}
-  );
-};
-
+        setGpsCoords([lat, lon]);
+      },
+      () => {}
+    );
+  };
   const searchRooms = () => {
     const results = [];
     Object.entries(ROOM_DATABASE).forEach(([block, blockData]) => {
@@ -1411,24 +1414,17 @@ const CampusNavigatior = () => {
     });
     return results;
   };
-
   const generateRoute = async () => {
     const s = await getStartNode();
-    if (!s) {
-      alert("Invalid starting location.");
-      return;
-    }
+    if (!s) return alert("Invalid starting location.");
 
     setResolvedStartNode(s);
 
-    if (!toBlock || !toFloor || !toRoom) {
-      alert("Please select destination.");
-      return;
-    }
+    if (!toBlock || !toFloor || !toRoom)
+      return alert("Please select destination.");
 
     const t = `${toBlock}-${toFloor}-${toRoom}`;
     const { path } = dijkstra(s, t);
-
     const steps = [];
 
     steps.push({
@@ -1438,6 +1434,7 @@ const CampusNavigatior = () => {
     });
 
     let prev = s;
+
     path.slice(1).forEach((node) => {
       const [b1, f1] = prev.split("-");
       const [b2, f2] = node.split("-");
@@ -1466,7 +1463,8 @@ const CampusNavigatior = () => {
           text: `Enter ${b2} Block`,
         });
       } else if (f1 !== f2) {
-        const direction = parseInt(f2) > parseInt(f1) ? "up" : "down";
+        const direction =
+          parseInt(f2) > parseInt(f1) ? "up" : "down";
         steps.push({
           type: "stairs",
           icon:
@@ -1497,7 +1495,6 @@ const CampusNavigatior = () => {
     setRoute(steps);
     setCurrentView("route");
   };
-
   const FloorPlan = ({ block, floor, highlightRoom }) => {
     const floorData = ROOM_DATABASE[block]?.floors[floor];
     if (!floorData) return null;
@@ -1535,43 +1532,50 @@ const CampusNavigatior = () => {
       </div>
     );
   };
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
       <div className="max-w-6xl mx-auto">
         <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
           <div className="flex items-center gap-3 mb-2">
             <Navigation className="w-8 h-8 text-indigo-600" />
-            <h1 className="text-3xl font-bold text-gray-800">GNITS Campus Navigation</h1>
+            <h1 className="text-3xl font-bold text-gray-800">
+              GNITS Campus Navigation
+            </h1>
           </div>
         </div>
 
+        {/* INPUT VIEW */}
         {currentView === "input" && (
           <div className="bg-white rounded-xl shadow-lg p-6">
-            <h2 className="text-xl font-semibold mb-4">Choose Starting Mode</h2>
+            <h2 className="text-xl font-semibold mb-4">
+              Choose Starting Mode
+            </h2>
 
             <div className="flex gap-4 mb-4">
               <button
                 onClick={() => setMode("gps")}
                 className={`px-4 py-2 rounded-lg ${
-                  mode === "gps" ? "bg-indigo-600 text-white" : "bg-gray-200"
+                  mode === "gps"
+                    ? "bg-indigo-600 text-white"
+                    : "bg-gray-200"
                 }`}
               >
                 Use GPS
               </button>
 
-              
-
               <button
                 onClick={() => setMode("manual")}
                 className={`px-4 py-2 rounded-lg ${
-                  mode === "manual" ? "bg-indigo-600 text-white" : "bg-gray-200"
+                  mode === "manual"
+                    ? "bg-indigo-600 text-white"
+                    : "bg-gray-200"
                 }`}
               >
                 Manual Select
               </button>
             </div>
 
+            {/* GPS MODE */}
             {mode === "gps" && (
               <div className="mb-4">
                 <button
@@ -1583,27 +1587,20 @@ const CampusNavigatior = () => {
 
                 {gpsCoords && (
                   <p className="mt-2 text-sm text-gray-700">
-                    GPS: {gpsCoords[0].toFixed(6)}, {gpsCoords[1].toFixed(6)}
+                    GPS: {gpsCoords[0].toFixed(6)},{" "}
+                    {gpsCoords[1].toFixed(6)}
                   </p>
                 )}
               </div>
             )}
 
-            {mode === "typed" && (
-              <div className="mb-4">
-                <input
-                  value={typedLocation}
-                  onChange={(e) => setTypedLocation(e.target.value)}
-                  placeholder="Type your current room (e.g., CL1)"
-                  className="w-full px-4 py-3 border rounded-lg"
-                />
-              </div>
-            )}
-
+            {/* MANUAL MODE */}
             {mode === "manual" && (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                 <div>
-                  <label className="block mb-2 font-medium">Block</label>
+                  <label className="block mb-2 font-medium">
+                    Block
+                  </label>
                   <select
                     value={fromBlock}
                     onChange={(e) => {
@@ -1622,7 +1619,9 @@ const CampusNavigatior = () => {
 
                 {fromBlock && (
                   <div>
-                    <label className="block mb-2 font-medium">Floor</label>
+                    <label className="block mb-2 font-medium">
+                      Floor
+                    </label>
                     <select
                       value={fromFloor}
                       onChange={(e) => {
@@ -1632,17 +1631,20 @@ const CampusNavigatior = () => {
                       className="w-full px-4 py-2 border rounded-lg"
                     >
                       <option value="">Select</option>
-                      {Object.keys(ROOM_DATABASE[fromBlock].floors).map((f) => (
+                      {Object.keys(
+                        ROOM_DATABASE[fromBlock].floors
+                      ).map((f) => (
                         <option key={f}>{f}</option>
-
-                        ))}
+                      ))}
                     </select>
                   </div>
                 )}
 
                 {fromBlock && fromFloor && (
                   <div>
-                    <label className="block mb-2 font-medium">Room</label>
+                    <label className="block mb-2 font-medium">
+                      Room
+                    </label>
                     <select
                       value={fromRoom}
                       onChange={(e) => setFromRoom(e.target.value)}
@@ -1650,7 +1652,8 @@ const CampusNavigatior = () => {
                     >
                       <option value="">Select</option>
                       {Object.keys(
-                        ROOM_DATABASE[fromBlock].floors[fromFloor].rooms
+                        ROOM_DATABASE[fromBlock].floors[fromFloor]
+                          .rooms
                       )
                         .filter((r) => r !== "Stairs" && r !== "Lift")
                         .map((r) => (
@@ -1661,39 +1664,47 @@ const CampusNavigatior = () => {
                 )}
               </div>
             )}
+
+            {/* SEARCH BAR */}
             <div className="mb-4">
-  <input
-    value={searchQuery}
-    onChange={(e) => setSearchQuery(e.target.value)}
-    placeholder="Search room (e.g., CL1, LH3, F10)"
-    className="w-full px-4 py-3 border rounded-lg"
-  />
+              <input
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search room (e.g., CL1, LH3, F10)"
+                className="w-full px-4 py-3 border rounded-lg"
+              />
 
-  {searchQuery && (
-    <div className="mt-2 bg-white border rounded-lg shadow max-h-60 overflow-y-auto">
-      {searchRooms().map((item, i) => (
-        <div
-          key={i}
-          onClick={() => {
-            setToBlock(item.block);
-            setToFloor(item.floor);
-            setToRoom(item.room);
-            setSearchQuery("");
-          }}
-          className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
-        >
-          <strong>{item.room}</strong> — {item.block}, Floor {item.floor}
-        </div>
-      ))}
-    </div>
-  )}
-</div>
+              {searchQuery && (
+                <div className="mt-2 bg-white border rounded-lg shadow max-h-60 overflow-y-auto">
+                  {searchRooms().map((item, i) => (
+                    <div
+                      key={i}
+                      onClick={() => {
+                        setToBlock(item.block);
+                        setToFloor(item.floor);
+                        setToRoom(item.room);
+                        setSearchQuery("");
+                      }}
+                      className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
+                    >
+                      <strong>{item.room}</strong> — {item.block},{" "}
+                      Floor {item.floor}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
 
-            <h2 className="text-xl font-semibold mt-6 mb-4">Destination</h2>
+            {/* DESTINATION SELECT */}
+            <h2 className="text-xl font-semibold mt-6 mb-4">
+              Destination
+            </h2>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
               <div>
-                <label className="block mb-2 font-medium">Block</label>
+                <label className="block mb-2 font-medium">
+                  Block
+                </label>
                 <select
                   value={toBlock}
                   onChange={(e) => {
@@ -1712,7 +1723,9 @@ const CampusNavigatior = () => {
 
               {toBlock && (
                 <div>
-                  <label className="block mb-2 font-medium">Floor</label>
+                  <label className="block mb-2 font-medium">
+                    Floor
+                  </label>
                   <select
                     value={toFloor}
                     onChange={(e) => {
@@ -1722,7 +1735,9 @@ const CampusNavigatior = () => {
                     className="w-full px-4 py-2 border rounded-lg"
                   >
                     <option value="">Select</option>
-                    {Object.keys(ROOM_DATABASE[toBlock].floors).map((f) => (
+                    {Object.keys(
+                      ROOM_DATABASE[toBlock].floors
+                    ).map((f) => (
                       <option key={f}>{f}</option>
                     ))}
                   </select>
@@ -1731,14 +1746,18 @@ const CampusNavigatior = () => {
 
               {toBlock && toFloor && (
                 <div>
-                  <label className="block mb-2 font-medium">Room</label>
+                  <label className="block mb-2 font-medium">
+                    Room
+                  </label>
                   <select
                     value={toRoom}
                     onChange={(e) => setToRoom(e.target.value)}
                     className="w-full px-4 py-2 border rounded-lg"
                   >
                     <option value="">Select</option>
-                    {Object.keys(ROOM_DATABASE[toBlock].floors[toFloor].rooms)
+                    {Object.keys(
+                      ROOM_DATABASE[toBlock].floors[toFloor].rooms
+                    )
                       .filter((r) => r !== "Stairs" && r !== "Lift")
                       .map((r) => (
                         <option key={r}>{r}</option>
@@ -1757,6 +1776,7 @@ const CampusNavigatior = () => {
           </div>
         )}
 
+        {/* ROUTE OUTPUT */}
         {currentView === "route" && route && (
           <div className="space-y-6">
             <button
@@ -1770,7 +1790,9 @@ const CampusNavigatior = () => {
             </button>
 
             <div className="bg-white rounded-xl shadow-lg p-6">
-              <h2 className="text-2xl font-bold text-gray-800 mb-4">Navigation</h2>
+              <h2 className="text-2xl font-bold text-gray-800 mb-4">
+                Navigation
+              </h2>
 
               <div className="space-y-4">
                 {route.map((step, i) => (
@@ -1799,15 +1821,23 @@ const CampusNavigatior = () => {
                     const room = r.join("-");
                     return (
                       <div>
-                        <h3 className="text-lg font-semibold mb-3">Start</h3>
-                        <FloorPlan block={b} floor={f} highlightRoom={room} />
+                        <h3 className="text-lg font-semibold mb-3">
+                          Start
+                        </h3>
+                        <FloorPlan
+                          block={b}
+                          floor={f}
+                          highlightRoom={room}
+                        />
                       </div>
                     );
                   })()}
 
                   {toBlock && toFloor && (
                     <div>
-                      <h3 className="text-lg font-semibold mb-3">Destination</h3>
+                      <h3 className="text-lg font-semibold mb-3">
+                        Destination
+                      </h3>
                       <FloorPlan
                         block={toBlock}
                         floor={toFloor}
@@ -1824,5 +1854,4 @@ const CampusNavigatior = () => {
     </div>
   );
 };
-
-export default CampusNavigatior;
+export default CampusNavigator;
