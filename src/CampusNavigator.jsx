@@ -1179,47 +1179,31 @@ const ROOM_DATABASE = {
   },
 
   CANTEEN: {
-    name: "Canteen Block",
-    color: "#fbbf24",
-    floors: {
-      0: {
-        rooms: {
-          "Canteen": { coords: [17.4122889, 78.3995060], pos: { x: 30, y: 40 } },
-          "Stairs": { coords: null, pos: { x: 50, y: 65 } }
-        }
-      }
-    }
-  },
-
-  SilverJubilee: {
-    name: "Silver Jubilee Block",
-    color: "#fbbf24",
-    floors: {
-      0: {
-        rooms: {
-          "S1 p1": { coords: [17.4125835, 78.3985642], pos: { x: 30, y: 40 } },
-          "S1 p2": { coords: [17.4118515, 78.3987077], pos: { x: 50, y: 35 } },
-          "S2 p1": { coords: [17.4123477, 78.3994353], pos: { x: 70, y: 40 } },
-          "S3 p1": { coords: [17.4131984, 78.3992194], pos: { x: 90, y: 40 } },
-          "S3 p2": { coords: [17.4130989, 78.3993096], pos: { x: 30, y: 40 } },
-          "S4": { coords: [17.4130714, 78.3993032], pos: { x: 50, y: 35 } },
-          "S5": { coords: [17.4116695, 78.3987325], pos: { x: 70, y: 40 } },
-          "Drawing Hall 2": { coords: [17.4116305, 78.3987218], pos: { x: 90, y: 40 } },
-          "Stairs": { coords: null, pos: { x: 50, y: 65 } }
-        }
-      },
-      1: {
-        rooms: {
-          "S6": { coords: [17.4120496, 78.3987895], pos: { x: 30, y: 40 } },
-          "S7": { coords: [17.4131955, 78.3992408], pos: { x: 50, y: 35 } },
-          "S8": { coords: [17.4131955, 78.3992220], pos: { x: 70, y: 40 } },
-          "S9": { coords: [17.4131657, 78.3994903], pos: { x: 90, y: 40 } },
-          "S10": { coords: [17.4131433, 78.3994963], pos: { x: 30, y: 40 } },
-          "Stairs": { coords: null, pos: { x: 50, y: 65 } }
-        }
+  name: "Canteen Block",
+  color: "#fbbf24",
+  floors: {
+    0: {
+      rooms: {
+        "Canteen": { coords: [17.4122889, 78.3995060], pos: { x: 30, y: 40 } },
+        "Stairs": { coords: null, pos: { x: 50, y: 65 } }
       }
     }
   }
+},
+
+  SilverJubilee: {
+  name: "Silver Jubilee Block",
+  color: "#fbbf24",
+  floors: {
+    0: {
+      rooms: {
+        "Entrance": { coords: [17.4125835, 78.3985642], pos: { x: 50, y: 50 } },
+        "Stairs": { coords: null, pos: { x: 50, y: 65 } }
+      }
+    }
+  }
+},
+
 };
 
 const BLOCK_CONNECTIONS = {
@@ -1228,8 +1212,8 @@ const BLOCK_CONNECTIONS = {
   ADMIN: { coords: [17.41080, 78.39877], exits: ['CSE', 'IT', 'EEE', 'ECE', 'CANTEEN'] },
   IT: { coords: [17.41190, 78.39870], exits: ['ADMIN', 'EEE', 'CANTEEN'] },
   EEE: { coords: [17.41200, 78.39825], exits: ['IT', 'ADMIN'] },
-  CANTEEN: { coords: [17.4122889, 78.3995060], exits: ['CSE', 'ADMIN', 'IT', 'SilverJubilee'] },
-  SilverJubilee: { coords: [17.4125835, 78.3985642], exits: ['CSE', 'ECE', 'CANTEEN'] }
+  CANTEEN: { coords: [17.4122889, 78.3995060], exits: ['CSE', 'ADMIN', 'IT', 'SilverJubilee']},
+SilverJubilee: { coords: [17.4125835, 78.3985642], exits: ['CSE', 'ECE', 'CANTEEN']},
 };
 
 const calculateDistance = (c1, c2) => {
@@ -1328,9 +1312,6 @@ const dijkstra = (start, end) => {
 
   return { path, distance: dist[end] };
 };
-
-// CURRENT LOCATION SYSTEM
-
 const findNearestNode = (coords) => {
   let best = null;
   let min = Infinity;
@@ -1390,10 +1371,7 @@ const CampusNavigation = () => {
       return findNearestNode(gpsCoords);
     }
 
-    if (mode === "typed") {
-      if (!typedLocation.trim()) return null;
-      return findRoomByName(typedLocation.trim());
-    }
+   
 
     if (mode === "manual") {
       if (!fromBlock || !fromFloor || !fromRoom) return null;
@@ -1403,14 +1381,22 @@ const CampusNavigation = () => {
     return null;
   };
 
-  const requestGps = () => {
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        setGpsCoords([pos.coords.latitude, pos.coords.longitude]);
-      },
-      () => {}
-    );
-  };
+ const requestGps = () => {
+  navigator.geolocation.getCurrentPosition(
+    (pos) => {
+      const lat = pos.coords.latitude;
+      const lon = pos.coords.longitude;
+
+      if (calculateDistance([lat, lon], BLOCK_CONNECTIONS["CSE"].coords) > 800) {
+        alert("You appear to be outside campus. GPS mode works only inside GNITS.");
+        return;
+      }
+
+      setGpsCoords([lat, lon]);
+    },
+    () => {}
+  );
+};
 
   const searchRooms = () => {
     const results = [];
@@ -1574,14 +1560,7 @@ const CampusNavigation = () => {
                 Use GPS
               </button>
 
-              <button
-                onClick={() => setMode("typed")}
-                className={`px-4 py-2 rounded-lg ${
-                  mode === "typed" ? "bg-indigo-600 text-white" : "bg-gray-200"
-                }`}
-              >
-                Type Location
-              </button>
+              
 
               <button
                 onClick={() => setMode("manual")}
@@ -1682,6 +1661,33 @@ const CampusNavigation = () => {
                 )}
               </div>
             )}
+            <div className="mb-4">
+  <input
+    value={searchQuery}
+    onChange={(e) => setSearchQuery(e.target.value)}
+    placeholder="Search room (e.g., CL1, LH3, F10)"
+    className="w-full px-4 py-3 border rounded-lg"
+  />
+
+  {searchQuery && (
+    <div className="mt-2 bg-white border rounded-lg shadow max-h-60 overflow-y-auto">
+      {searchRooms().map((item, i) => (
+        <div
+          key={i}
+          onClick={() => {
+            setToBlock(item.block);
+            setToFloor(item.floor);
+            setToRoom(item.room);
+            setSearchQuery("");
+          }}
+          className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
+        >
+          <strong>{item.room}</strong> — {item.block}, Floor {item.floor}
+        </div>
+      ))}
+    </div>
+  )}
+</div>
 
             <h2 className="text-xl font-semibold mt-6 mb-4">Destination</h2>
 
